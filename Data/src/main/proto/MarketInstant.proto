@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package strixpyrr.eagleeye.data.models;
+
+import "google/protobuf/timestamp.proto";
+
+message MarketInstant
+{
+	google.protobuf.Timestamp time = 1;
+	double  openPrice = 2;
+	double  highPrice = 3;
+	double   lowPrice = 4;
+	double closePrice = 5;
+	double volume     = 6;
+}
+
+message MarketInstantWithOutlook
+{
+	google.protobuf.Timestamp time = 1;
+	double  openPrice = 2;
+	double  highPrice = 3;
+	double   lowPrice = 4;
+	double closePrice = 5;
+	double volume     = 6;
+	double outlook    = 7;
+}

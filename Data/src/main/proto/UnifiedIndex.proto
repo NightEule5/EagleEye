@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package strixpyrr.eagleeye.data.models;
+
+import "MarketFlow.proto";
+import "SymbolType.proto";
+
+message UnifiedIndex
+{
+	// Maps terms to indexes used to represent them. A term can be either a symbol,
+	// an asset, or an exchange Id.
+	map<string, uint32> terms = 1;
+
+	map<uint32, SymbolMetadata> symbols = 2;
+
+	message SymbolMetadata
+	{
+		uint32   heldAsset = 1;
+		uint32 tradedAsset = 2;
+		uint32 exchange    = 3;
+		SymbolType type    = 4;
+	}
+}

@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package strixpyrr.eagleeye.data.models;
+
+import "UnifiedIndex.proto";
+import "MarketFlow.proto";
+
+import "wire/extensions.proto";
+
+message Dataset
+{
+	UnifiedIndex index = 1 [ (wire.since) = "1" ];
+
+	// Where the key is a symbol index and the value is market data for the symbol,
+	// grouped in terms of the interval used (eg 1 Day, 30 Minutes, etc).
+	map<uint32, SymbolIntervalGroup> symbols = 2 [ (wire.since) = "1" ];
+}
+
+message SymbolIntervalGroup
+{
+	repeated MarketFlow data = 1 [ (wire.since) = "1" ];
+}

@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package strixpyrr.eagleeye.data.storage.models;
+
+import "MarketFlow.proto";
+import "SymbolType.proto";
+
+// This message has been replaced with UnifiedIndex.
+message Index
+{
+	map<string, uint32>    assetIndexes     = 1;
+	map<string, uint32>   symbolIndexes     = 2;
+	map<string, uint32> intervalIndexes     = 3;
+
+	map<uint32, SymbolMetadata> symbols     = 4;
+	map<uint32, IntervalMetadata> intervals = 5;
+}
+
+message SymbolMetadata
+{
+	string indexName   = 1;
+	uint32   heldAsset = 2;
+	uint32 tradedAsset = 3;
+	strixpyrr.eagleeye.data.models.SymbolType type = 4;
+}
+
+message IntervalMetadata
+{
+	string indexName = 1;
+	strixpyrr.eagleeye.data.models.Interval interval = 2;
+}

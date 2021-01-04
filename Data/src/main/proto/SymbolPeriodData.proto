@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package strixpyrr.eagleeye.data.models;
+
+import "MarketFlow.proto";
+
+message SymbolPeriodData
+{
+	uint32 symbolIndex          = 1;
+	repeated MarketFlow periods = 2;
+}

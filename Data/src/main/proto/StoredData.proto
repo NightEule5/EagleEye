@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package strixpyrr.eagleeye.data.storage.models;
+
+import "UnifiedIndex.proto";
+import "SymbolPeriodData.proto";
+
+message StoredData
+{
+	strixpyrr.eagleeye.data.models.UnifiedIndex index = 1;
+	map<uint32, strixpyrr.eagleeye.data.models.SymbolPeriodData> periodData = 2;
+}

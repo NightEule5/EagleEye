@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package strixpyrr.eagleeye.data.models;
+
+enum SymbolType
+{
+	Spot      = 0;
+	Futures   = 1;
+	Option    = 2;
+	Perpetual = 3;
+	Index     = 4;
+	Credit    = 5;
+}
