@@ -24,6 +24,9 @@ import strixpyrr.abstrakt.annotations.InlineOnly
 import strixpyrr.eagleeye.data.DataAggregation.OperationInfo
 import strixpyrr.eagleeye.data.DataAggregation.OperationInfo.Mode
 import strixpyrr.eagleeye.data.internal.roundedTo
+import uy.klutter.core.common.withNotNull
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.Path
 import kotlin.system.exitProcess
@@ -38,7 +41,9 @@ suspend fun main(parameters: Array<String>)
 {
 	try
 	{
-		val parser = ArgParser("EagleEye - DataAggregator", prefixStyle = GNU)
+		val parser = ArgParser("Data", prefixStyle = GNU)
+		
+		val verbose = parser.verboseOption
 		
 		val source = parser.sourceOption
 		val apiKey = parser.apiKeyOption
@@ -46,8 +51,16 @@ suspend fun main(parameters: Array<String>)
 		val interval = parser.intervalOption
 		val limit = parser.entryLimitOption
 		val mode = parser.modeOption
+		val start = parser.startTimeOption
+		val end = parser.endTimeOption
+		val exchange = parser.exchangeOption
+		val quote = parser.quoteOption
+		val base = parser.baseOption
 		
 		parser.parse(parameters)
+		
+		if (verbose.value)
+			Verbose = true
 		
 		if (!interval.value.isValidTimeInterval)
 			throw DataAggregatorException("${interval.value} is not a valid time interval.")
@@ -58,13 +71,28 @@ suspend fun main(parameters: Array<String>)
 			{
 				withTimeout(60L * 1000L)
 				{
+					val outputPath = output.value ?: "./EagleEyeDataset.dat"
+					
 					aggregateData(
 						DataAggregation.create(
-							Path(output.value),
+							Path(outputPath),
 							source.value,
 							apiKey.value,
 							OperationInfo(
-								interval.value, limit.value, mode.value, TODO(), TODO(), TODO(), TODO(), TODO()
+								interval.value,
+								limit.value,
+								mode.value,
+								start.value withNotNull
+								{
+									LocalDateTime.parse(this, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+								},
+								end.value withNotNull
+								{
+									LocalDateTime.parse(this, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+								},
+								exchange.value,
+								quote.value,
+								base.value
 							)
 						)
 					)
@@ -72,21 +100,34 @@ suspend fun main(parameters: Array<String>)
 			}
 			catch (e: TimeoutCancellationException)
 			{
-				println("Data aggregation timed out.")
+				error("Data aggregation timed out.")
 			}
 		}
 		
-		println("Data aggregation finished successfully in ${executionTime.inSeconds roundedTo 2}s.")
+		status("Data aggregation finished successfully in ${executionTime.inSeconds roundedTo 2}s.")
+		
+		exitProcess(0)
 	}
 	catch (e: DataAggregatorException)
 	{
-		println("Data aggregation failed:\n")
+		error("Data aggregation failed:\n")
 		
 		e.printStackTrace()
 		
 		exitProcess(1)
 	}
 }
+
+@InlineOnly
+inline fun DataAggregation.Companion.getVerboseOption(parser: ArgParser) = parser.verboseOption
+
+@PublishedApi
+internal val ArgParser.verboseOption get() =
+	option(
+		ArgType.Boolean,
+		fullName = "verbose",
+		shortName = "v"
+	).default(false)
 
 // Exposes sourceOption without potentially conflicting with options with the same
 // name in other modules.
@@ -98,7 +139,7 @@ internal val ArgParser.sourceOption get() =
 	option(
 		ArgType.Choice<Source>(),
 		fullName = "source",
-		shortName = "s",
+		shortName = "i",
 		description = "The source to download data from."
 	).default(Source.CoinAPI)
 
@@ -112,7 +153,7 @@ internal val ArgParser.outputPathOption get() =
 		fullName = "output-path",
 		shortName = "o",
 		description = "A path to the file or directory to write data to."
-	).required()
+	)
 
 @InlineOnly
 inline fun DataAggregation.Companion.getApiKeyOption(parser: ArgParser) = parser.apiKeyOption
@@ -186,3 +227,58 @@ internal val ArgParser.modeOption get() =
 		fullName = "mode",
 		shortName = "m"
 	).default(Mode.Append)
+
+@InlineOnly
+inline fun DataAggregation.Companion.getStartTimeOption(parser: ArgParser) = parser.startTimeOption
+
+@PublishedApi
+internal val ArgParser.startTimeOption get() =
+	option(
+		ArgType.String,
+		fullName = "start-time",
+		shortName = "s"
+	)
+
+@InlineOnly
+inline fun DataAggregation.Companion.getEndTimeOption(parser: ArgParser) = parser.endTimeOption
+
+@PublishedApi
+internal val ArgParser.endTimeOption get() =
+	option(
+		ArgType.String,
+		fullName = "end-time",
+		shortName = "e"
+	)
+
+@InlineOnly
+inline fun DataAggregation.Companion.getExchangeOption(parser: ArgParser) = parser.exchangeOption
+
+@PublishedApi
+internal val ArgParser.exchangeOption get() =
+	option(
+		ArgType.String,
+		fullName = "exchange-name",
+		shortName = "E"
+	).required()
+
+@InlineOnly
+inline fun DataAggregation.Companion.getQuoteOption(parser: ArgParser) = parser.quoteOption
+
+@PublishedApi
+internal val ArgParser.quoteOption get() =
+	option(
+		ArgType.String,
+		fullName = "quote-asset",
+		shortName = "Q"
+	).required()
+
+@InlineOnly
+inline fun DataAggregation.Companion.getBaseOption(parser: ArgParser) = parser.baseOption
+
+@PublishedApi
+internal val ArgParser.baseOption get() =
+	option(
+		ArgType.String,
+		fullName = "base-asset",
+		shortName = "B"
+	).required()
