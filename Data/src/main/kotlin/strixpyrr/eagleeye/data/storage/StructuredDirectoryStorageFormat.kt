@@ -13,10 +13,7 @@
 // limitations under the License.
 package strixpyrr.eagleeye.data.storage
 
-import strixpyrr.eagleeye.data.storage.models.StoredData
-import java.nio.file.Path
-
-object StructuredDirectoryStorageFormat : IDataStorageFormat
+/*object StructuredDirectoryStorageFormat : IDataStorageFormat
 {
 	override fun canStoreTo(path: Path): Boolean
 	{
@@ -33,4 +30,4 @@ object StructuredDirectoryStorageFormat : IDataStorageFormat
 		TODO("Not yet implemented")
 	}
 	
-}
+}*/

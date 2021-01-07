@@ -13,7 +13,7 @@
 // limitations under the License.
 package strixpyrr.eagleeye.data.storage
 
-import strixpyrr.eagleeye.data.storage.models.StoredData
+import strixpyrr.eagleeye.data.models.Dataset
 import java.nio.file.Path
 
 interface IDataStorageFormat
@@ -26,7 +26,7 @@ interface IDataStorageFormat
 	 *  be created. If this is a file, either a raw binary file or an archive will
 	 *  be created.
 	 */
-	suspend fun store(data: StoredData, path: Path): Boolean
+	suspend fun store(data: Dataset, path: Path): Boolean
 	
-	suspend fun extract(source: Path): StoredData?
+	suspend fun extract(source: Path): Dataset?
 }

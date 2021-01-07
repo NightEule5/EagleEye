@@ -14,9 +14,10 @@
 package strixpyrr.eagleeye.data.storage
 
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import strixpyrr.eagleeye.data.storage.models.StoredData
+import strixpyrr.eagleeye.data.models.Dataset
+import strixpyrr.eagleeye.data.statusVerbose
+import strixpyrr.eagleeye.data.warnVerbose
 import uy.klutter.core.common.exists
 import java.io.IOException
 import java.nio.file.Path
@@ -46,39 +47,68 @@ object TransparentStorageFormat : IDataStorageFormat
 	/**
 	 * @throws SecurityException Read access is denied
 	 */
-	override suspend fun store(data: StoredData, path: Path): Boolean
+	override suspend fun store(data: Dataset, path: Path): Boolean
 	{
 		val file = path.tryResolve() ?: return false
 		
-		return coroutineScope()
+		return withContext(Dispatchers.IO)
 		{
-			withContext(Dispatchers.IO)
+			try
 			{
-				try
+				file.toFile()
+					.outputStream()
+					.use(data::encode)
+				
+				statusVerbose()
 				{
-					file.toFile()
-						.outputStream()
-						.use(data::encode)
-					
-					true
+					"Data was saved to ${file.toAbsolutePath()}."
 				}
-				catch (e: IOException)
+				
+				true
+			}
+			catch (e: IOException)
+			{
+				warnVerbose(e)
 				{
-					false
+					"Writing data to ${file.toAbsolutePath()} failed:"
 				}
+				
+				false
 			}
 		}
 	}
 	
-	override suspend fun extract(source: Path): StoredData?
+	override suspend fun extract(source: Path): Dataset?
 	{
 		if (source.exists())
-			TODO("Not yet implemented")
+		{
+			val file = source.tryResolve() ?: return null
+			
+			return withContext(Dispatchers.IO)
+			{
+				try
+				{
+					file.toFile()
+						.inputStream()
+						.use(Dataset.ADAPTER::decode)
+				}
+				catch (e: IOException)
+				{
+					null
+				}
+			}
+		}
 		else return null
 	}
 	
 	private fun Path.tryResolve(): Path?
 	{
+		if (!exists())
+		{
+			if (extension.isEmpty()) createDirectory()
+			else createFile()
+		}
+		
 		if (isDirectory())
 		{
 			val namesake = this / "$name.dat"
@@ -98,7 +128,7 @@ object TransparentStorageFormat : IDataStorageFormat
 	{
 		val extension = extension
 		
-		if (extension == "dat" || extension == "bin" || extension == "")
+		if (extension == "dat" || extension == "bin" || extension.isEmpty())
 			return isWritable
 		
 		return false
