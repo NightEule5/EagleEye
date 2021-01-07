@@ -13,9 +13,13 @@
 // limitations under the License.
 package strixpyrr.eagleeye.data.sources.apis
 
+import com.fasterxml.jackson.annotation.JsonAlias
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonValue
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import okhttp3.OkHttpClient
 import retrofit2.*
 import retrofit2.converter.jackson.JacksonConverterFactory
@@ -103,6 +107,7 @@ open class CoinApiClient protected constructor(retrofit: Retrofit)
 	data class Result<V>(
 		val value: V?,
 		val status: Status,
+		val errorMessage: String?,
 		val rateLimit: Int,
 		val remaining: Int,
 		val requestCost: Int,
@@ -113,6 +118,7 @@ open class CoinApiClient protected constructor(retrofit: Retrofit)
 			Result(
 				value?.run(transform),
 				status,
+				errorMessage,
 				rateLimit,
 				remaining,
 				requestCost,
@@ -156,6 +162,18 @@ open class CoinApiClient protected constructor(retrofit: Retrofit)
 			val value = body()
 			val code = code()
 			
+			var errorMessage: String? = null
+			
+			errorBody() whenNotNull
+			{ error ->
+				val e = error.charStream()
+				
+				val message = e.readText()
+				
+				errorMessage = jackson.readValue<Error>(e).error
+				// errorMessage = jackson.readValue<Error>(error.charStream()).error
+			}
+			
 			val rateLimit: Int
 			val remaining: Int
 			val requestCost: Int
@@ -172,7 +190,7 @@ open class CoinApiClient protected constructor(retrofit: Retrofit)
 			if (code == 200 && value == null)
 				throw Exception("The request was successful, but no value was returned.")
 			
-			return Result(value, Status from code, rateLimit, remaining, requestCost, reset)
+			return Result(value, Status from code, errorMessage, rateLimit, remaining, requestCost, reset)
 		}
 		
 		/**
@@ -191,12 +209,7 @@ open class CoinApiClient protected constructor(retrofit: Retrofit)
 				.client(createClient().build())
 				.addConverterFactory(
 					JacksonConverterFactory
-						.create(
-							jacksonObjectMapper()
-								.setPropertyNamingStrategy(
-									PropertyNamingStrategy.SNAKE_CASE
-								)
-						)
+						.create(jackson)
 				)
 				.addConverterFactory(
 					// A converter factory for converting arrays/varargs into comma
@@ -252,6 +265,15 @@ open class CoinApiClient protected constructor(retrofit: Retrofit)
 		@JvmStatic
 		protected fun createClient(): OkHttpClient.Builder =
 			createOkHttpClient(defaultHeader = "Accept" to "application/json")
+		
+		private val jackson by lazy()
+		{
+			jacksonObjectMapper()
+				.setPropertyNamingStrategy(
+					PropertyNamingStrategy.SNAKE_CASE
+				)
+				.registerModule(JavaTimeModule())
+		}
 	}
 }
 
@@ -351,13 +373,16 @@ data class Exchange(
 	val dataEnd: Date,
 	val dataQuoteStart: Instant,
 	val dataQuoteEnd: Instant,
-	val dataOrderBookStart: Instant,
-	val dataOrderBookEnd: Instant,
+	val dataOrderbookStart: Instant,
+	val dataOrderbookEnd: Instant,
 	val dataTradeStart: Instant,
 	val dataTradeEnd: Instant,
 	val dataSymbolsCount: Int,
+	@JsonAlias("volume_1hrs_usd")
 	val volume1hrsUsd: Double,
+	@JsonAlias("volume_1day_usd")
 	val volume1dayUsd: Double,
+	@JsonAlias("volume_1mth_usd")
 	val volume1mthUsd: Double
 )
 
@@ -371,31 +396,36 @@ data class Symbol(
 	val dataEnd: Date,
 	val dataQuoteStart: Instant,
 	val dataQuoteEnd: Instant,
-	val dataOrderBookStart: Instant,
-	val dataOrderBookEnd: Instant,
+	val dataOrderbookStart: Instant,
+	val dataOrderbookEnd: Instant,
 	val dataTradeStart: Instant,
 	val dataTradeEnd: Instant,
+	@JsonAlias("volume_1hrs")
 	val volume1hrs: Double,
+	@JsonAlias("volume_1hrs_usd")
 	val volume1hrsUsd: Double,
+	@JsonAlias("volume_1day")
 	val volume1day: Double,
+	@JsonAlias("volume_1day_usd")
 	val volume1dayUsd: Double,
+	@JsonAlias("volume_1mth")
 	val volume1mth: Double,
+	@JsonAlias("volume_1mth_usd")
 	val volume1mthUsd: Double,
 	val price: Double
 )
 
 enum class SymbolType(@JsonValue val value: String)
 {
-	Spot     (Spot     .name.toUpperCase()),
-	Futures  (Futures  .name.toUpperCase()),
-	Option   (Option   .name.toUpperCase()),
-	Perpetual(Perpetual.name.toUpperCase()),
-	Index    (Index    .name.toUpperCase()),
-	Credit   (Credit   .name.toUpperCase())
+	Spot     ("SPOT"     ),
+	Futures  ("FUTURES"  ),
+	Option   ("OPTION"   ),
+	Perpetual("PERPETUAL"),
+	Index    ("INDEX"    ),
+	Credit   ("CREDIT"   )
 }
 
 data class HistoricalOhlcvData(
-	val symbolId: String,
 	val timePeriodStart: Instant,
 	val timePeriodEnd: Instant,
 	val timeOpen: Instant,
@@ -406,4 +436,16 @@ data class HistoricalOhlcvData(
 	val priceClose: Double,
 	val volumeTraded: Double,
 	val tradesCount: Int
+)
+
+internal data class Error(
+	val error: String?,
+	@[JsonAlias("faq_0") JsonIgnore]
+	val faq0: String?,
+	@[JsonAlias("faq_1") JsonIgnore]
+	val faq1: String?,
+	@[JsonAlias("faq_2") JsonIgnore]
+	val faq2: String?,
+	@[JsonAlias("faq_3") JsonIgnore]
+	val faq3: String?
 )

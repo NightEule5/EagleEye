@@ -13,12 +13,33 @@
 // limitations under the License.
 package strixpyrr.eagleeye.data.sources
 
+import strixpyrr.eagleeye.data.models.Interval
+import java.time.Instant
+
 interface IDataSource
 {
+	val limitRequestFactor: Int
+	
 	// Todo: Add some way of conveying how many requests are left, and any errors
 	//  that come up.
 	
-	suspend fun getSymbol(apiKey: String, exchange: String, base: String, quote: String): ISymbolResult
+	fun toSourceNotation(interval: Interval): String
+	
+	suspend fun getSymbol(
+		apiKey: String,
+		exchange: String,
+		base: String,
+		quote: String
+	): ISymbolResult
+	
+	suspend fun getHistoricalData(
+		apiKey: String,
+		symbol: String,
+		interval: String,
+		timeStart: Instant,
+		timeEnd: Instant? = null,
+		limit: Int? = null
+	): IHistoricalDataResult
 	
 	interface IResult
 	{
@@ -37,5 +58,30 @@ interface IDataSource
 		operator fun component2() = actualBaseAsset
 		operator fun component3() = actualQuoteAsset
 		operator fun component4() = actualExchange
+	}
+	
+	interface IHistoricalDataResult : IResult
+	{
+		val points: Collection<IPoint>
+		
+		interface IPoint
+		{
+			// The start time of this point.
+			val time: Instant
+			val open: Double
+			val high: Double
+			val low: Double
+			val close: Double
+			val volume: Double
+			val trades: Int
+			
+			operator fun component1() = time
+			operator fun component2() = open
+			operator fun component3() = high
+			operator fun component4() = low
+			operator fun component5() = close
+			operator fun component6() = volume
+			operator fun component7() = trades
+		}
 	}
 }

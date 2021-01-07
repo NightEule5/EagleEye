@@ -13,6 +13,8 @@
 // limitations under the License.
 package strixpyrr.eagleeye.data.sources
 
+import java.time.Instant
+
 abstract class DataSource : IDataSource
 {
 	protected abstract class Result(
@@ -66,6 +68,45 @@ abstract class DataSource : IDataSource
 					actualBaseAsset,
 					actualQuoteAsset,
 					actualExchange
+				)
+		}
+	}
+	
+	protected class HistoricalDataResult(
+		errorMessage: String?,
+		points: Collection<Point> = emptyList()
+	) : Result(errorMessage), IDataSource.IHistoricalDataResult
+	{
+		override val points = points
+			get() =
+				if (field !== emptyList<Nothing>())
+					field
+				else throw FailedResultAssessException()
+		
+		class Point(
+			override val time: Instant,
+			override val open: Double,
+			override val high: Double,
+			override val low: Double,
+			override val close: Double,
+			override val volume: Double,
+			override val trades: Int
+		) : IDataSource.IHistoricalDataResult.IPoint
+		
+		companion object
+		{
+			@JvmStatic
+			fun createError(message: String) =
+				HistoricalDataResult(
+					errorMessage = message,
+				)
+			
+			@JvmStatic
+			fun createSuccess(
+				data: Collection<Point>
+			) = HistoricalDataResult(
+					errorMessage = null,
+					data
 				)
 		}
 	}

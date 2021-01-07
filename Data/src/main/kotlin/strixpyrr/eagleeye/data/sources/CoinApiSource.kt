@@ -13,12 +13,18 @@
 // limitations under the License.
 package strixpyrr.eagleeye.data.sources
 
-import com.github.ajalt.mordant.terminal.TextColors.yellow
+import strixpyrr.eagleeye.data.models.Interval
 import strixpyrr.eagleeye.data.sources.apis.CoinApiClient
 import strixpyrr.eagleeye.data.sources.apis.CoinApiClient.Status.*
+import strixpyrr.eagleeye.data.warnVerbose
+import java.time.Instant
 
 open class CoinApiSource(protected val client: CoinApiClient = CoinApiClient()) : DataSource()
 {
+	override val limitRequestFactor get() = 100
+	
+	override fun toSourceNotation(interval: Interval) = interval.coinApiNotation
+	
 	override suspend fun getSymbol(apiKey: String, exchange: String, base: String, quote: String): IDataSource.ISymbolResult
 	{
 		val preparedExchange = exchange.toUpperCase()
@@ -33,12 +39,13 @@ open class CoinApiSource(protected val client: CoinApiClient = CoinApiClient()) 
 			val value = symbols.value!!
 			
 			if (value.size > 1)
-				println(
-					yellow(
-						"Multiple symbol results were received. The first one " +
-						"will be used, which may not be the desired behavior."
-					)
-				)
+				warnVerbose()
+				{
+					val results = value.joinToString { it.symbolId }
+					
+					"Multiple symbol results were received: $results. The first" +
+					" one will be used, which may not be the desired behavior."
+				}
 			
 			val symbol = value.firstOrNull() ?:
 				return SymbolResult.createError("No symbol results were received.")
@@ -50,8 +57,37 @@ open class CoinApiSource(protected val client: CoinApiClient = CoinApiClient()) 
 				symbol.exchangeId
 			)
 		}
-		else SymbolResult.createError(symbols.status.error)
+		else SymbolResult.createError(symbols.error)
 	}
+	
+	override suspend fun getHistoricalData(apiKey: String, symbol: String, interval: String, timeStart: Instant, timeEnd: Instant?, limit: Int?): IDataSource.IHistoricalDataResult
+	{
+		val data = client.getHistoricalData(apiKey, symbol, interval, timeStart, timeEnd, limit = limit)
+		
+		return if (data.status.isSuccess)
+		{
+			val value =
+				data.value!!
+					.map()
+					{
+						HistoricalDataResult.Point(
+							it.timePeriodStart,
+							it.priceOpen,
+							it.priceHigh,
+							it.priceLow,
+							it.priceClose,
+							it.volumeTraded,
+							it.tradesCount
+						)
+					}
+			
+			HistoricalDataResult.createSuccess(value)
+		}
+		else HistoricalDataResult.createError(data.error)
+	}
+	
+	protected val CoinApiClient.Result<*>.error get() =
+		"The server returned an error (${status.code}): $errorMessage."
 	
 	protected val CoinApiClient.Status.error get() =
 		when (this)
@@ -63,4 +99,19 @@ open class CoinApiSource(protected val client: CoinApiClient = CoinApiClient()) 
 			NoData          -> "No data was available (HTTP status code ${NoData.code})."
 			Success         -> error("A successful status has no error message.")
 		}
+	
+	companion object
+	{
+		val Interval.coinApiNotation get() =
+			length.toString() +
+				when (denomination)
+				{
+					Interval.Denomination.Seconds -> "SEC"
+					Interval.Denomination.Minutes -> "MIN"
+					Interval.Denomination.Hours   -> "HRS"
+					Interval.Denomination.Days    -> "DAY"
+					Interval.Denomination.Months  -> "MTH"
+					Interval.Denomination.Years   -> "YRS"
+				}
+	}
 }
