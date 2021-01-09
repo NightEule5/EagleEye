@@ -41,5 +41,6 @@ allprojects()
 }
 
 dependencies {
+	implementation(project(":Common"))
 	implementation(project(":DataAggregator"))
 }
