@@ -24,14 +24,17 @@ fun console(currentScope: ConsoleContentScope = ConsoleContentScope(), format: C
 	return currentScope
 }
 
-class ConsoleContentScope
+class ConsoleContentScope(
+	indentationType: IndentationType = IndentationType.Tabs,
+	style: TextStyle = DefaultStyle
+)
 {
 	var indentation = "\t"
 		private set
 	var indentLevel = 0
 		private set
 	
-	var indentationType = IndentationType.Tabs
+	var indentationType = indentationType
 		set(value)
 		{
 			indentation = when(value)
@@ -44,7 +47,8 @@ class ConsoleContentScope
 			field = value
 		}
 	
-	var currentStyle: TextStyle = DefaultStyle
+	private val baseStyle = style
+	var currentStyle      = style
 	
 	fun indent() = ++indentLevel
 	fun dedent() = --indentLevel
@@ -107,7 +111,7 @@ class ConsoleContentScope
 		styledWith(this@invoke, format)
 	}
 	
-	fun resetStyle() { currentStyle = DefaultStyle }
+	fun resetStyle() { currentStyle = baseStyle }
 	
 	fun startLine()
 	{
