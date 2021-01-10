@@ -36,7 +36,13 @@ allprojects()
 		
 		noStdlib = false
 		
-		freeCompilerArgs = listOf("-Xopt-in=kotlinx.cli.ExperimentalCli", "-Xopt-in=kotlin.RequiresOptIn", "-Xjvm-default=all", "-Xstring-concat=indy-with-constants")
+		freeCompilerArgs = listOf(
+			"-Xopt-in=kotlinx.cli.ExperimentalCli",
+			"-Xopt-in=kotlin.contracts.ExperimentalContracts",
+			"-Xopt-in=kotlin.RequiresOptIn",
+			"-Xjvm-default=all",
+			"-Xstring-concat=indy-with-constants"
+		)
 	}
 }
 
