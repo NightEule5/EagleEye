@@ -167,6 +167,12 @@ class ConsoleContentScope(
 		  endLine()
 	}
 	
+	fun finishLine(value: String)
+	{
+		printFragment(value)
+		endLine()
+	}
+	
 	companion object
 	{
 		@[JvmField PublishedApi]
