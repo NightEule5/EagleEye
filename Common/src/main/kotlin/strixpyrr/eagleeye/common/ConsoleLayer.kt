@@ -15,11 +15,29 @@ package strixpyrr.eagleeye.common
 
 import com.github.ajalt.mordant.rendering.TextStyle
 import strixpyrr.abstrakt.annotations.InlineOnly
+import strixpyrr.eagleeye.common.ConsoleContentScope.*
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 @InlineOnly
-fun console(currentScope: ConsoleContentScope = ConsoleContentScope(), format: ConsoleContentScope.() -> Unit): ConsoleContentScope
+inline fun console(
+	indentationType: IndentationType = IndentationType.Tabs,
+	style: TextStyle = ConsoleContentScope.DefaultStyle,
+	format: ConsoleContentScope.() -> Unit
+): ConsoleContentScope
+{
+	contract {
+		callsInPlace(format, InvocationKind.EXACTLY_ONCE)
+	}
+	
+	return console(ConsoleContentScope(indentationType, style), format)
+}
+
+@InlineOnly
+inline fun console(
+	currentScope: ConsoleContentScope = ConsoleContentScope(),
+	format: ConsoleContentScope.() -> Unit
+): ConsoleContentScope
 {
 	contract {
 		callsInPlace(format, InvocationKind.EXACTLY_ONCE)
@@ -151,6 +169,7 @@ class ConsoleContentScope(
 	
 	companion object
 	{
-		private val DefaultStyle = TextStyle()
+		@[JvmField PublishedApi]
+		internal val DefaultStyle = TextStyle()
 	}
 }
