@@ -21,6 +21,12 @@ import kotlin.contracts.contract
 @InlineOnly
 fun console(currentScope: ConsoleContentScope = ConsoleContentScope(), format: ConsoleContentScope.() -> Unit): ConsoleContentScope
 {
+	contract {
+		callsInPlace(format, InvocationKind.EXACTLY_ONCE)
+	}
+	
+	currentScope.format()
+	
 	return currentScope
 }
 
