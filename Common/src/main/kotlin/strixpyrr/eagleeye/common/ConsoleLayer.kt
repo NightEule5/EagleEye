@@ -137,19 +137,38 @@ class ConsoleContentScope(
 	
 	fun resetStyle() { currentStyle = baseStyle }
 	
-	fun startLine()
+	private var lineStarted = false
+	
+	fun startLine(): Boolean
 	{
-		for (i in 0 until indentLevel)
-			print(indentation)
+		if (!lineStarted)
+		{
+			for (i in 0 until indentLevel)
+				print(indentation)
+			
+			lineStarted = true
+			
+			return false
+		}
+		
+		return true
 	}
 	
-	fun endLine() = println()
+	fun endLine() = println().also { lineStarted = false }
 	
-	fun printFragment(style: TextStyle, value: String) =
+	fun printFragment(style: TextStyle, value: String)
+	{
+		startLine()
+		
 		print((currentStyle + style)(value))
+	}
 	
-	fun printFragment(value: String) =
+	fun printFragment(value: String)
+	{
+		startLine()
+		
 		print(currentStyle(value))
+	}
 	
 	operator fun String.invoke() = printFragment(this)
 	
