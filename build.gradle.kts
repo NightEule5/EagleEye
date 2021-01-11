@@ -13,9 +13,12 @@ allprojects()
 	
 	repositories()
 	{
+		maven(url = "https://dl.bintray.com/jetbrains/markdown/")
+		
+		maven(url = "https://kotlin.bintray.com/kotlinx")
+		
 		mavenCentral()
 		mavenLocal()
-		maven(url = "https://kotlin.bintray.com/kotlinx")
 	}
 	
 	dependencies {
@@ -48,5 +51,4 @@ allprojects()
 
 dependencies {
 	implementation(project(":Common"))
-	implementation(project(":DataAggregator"))
 }
