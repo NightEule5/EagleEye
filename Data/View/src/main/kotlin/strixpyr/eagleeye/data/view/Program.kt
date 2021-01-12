@@ -26,20 +26,31 @@ suspend fun main(parameters: Array<String>)
 {
 	val parser = ArgParser("View", prefixStyle = GNU)
 	
-	val datasetPath by parser.datasetPathOption
+	val datasetPath by parser.DatasetPathOption
+	val readable    by parser.HumanReadableFlag
 	
 	parser.parse(parameters)
 	
-	view(Path(datasetPath))
+	view(
+		datasetPath   = Path(datasetPath),
+		humanReadable = readable
+	)
 }
 
 @InlineOnly
-inline fun ArgParser.getViewDatasetPathOption() = datasetPathOption
+inline fun ArgParser.getViewDatasetPathOption() = DatasetPathOption
 
 @PublishedApi
-internal val ArgParser.datasetPathOption get() =
+internal val ArgParser.DatasetPathOption get() =
 	option(
 		ArgType.String,
 		fullName = "dataset-path",
 		shortName = "d"
 	).default("")
+
+internal val ArgParser.HumanReadableFlag get() =
+	option(
+		ArgType.Boolean,
+		fullName = "human-readable",
+		shortName = "H"
+	).default(false)
