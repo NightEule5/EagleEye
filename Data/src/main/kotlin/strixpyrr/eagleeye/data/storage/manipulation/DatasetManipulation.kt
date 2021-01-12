@@ -69,6 +69,10 @@ internal class DatasetScope(private val existing: Dataset?)
 	
 	private val symbols = existing?.symbols?.toMutableMap() ?: mutableMapOf()
 	
+	fun hasSymbol(symbol: String) = symbol in termMap
+	fun hasQuote(quote: String) = quote in termMap
+	fun hasBase(base: String) = base in termMap
+	
 	@OptIn(ExperimentalContracts::class)
 	inline fun onSymbol(
 		symbol: String,

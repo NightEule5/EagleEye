@@ -60,33 +60,58 @@ suspend fun aggregateData(aggregation: DataAggregation)
 				"The path provided is not a valid location to store the resulting dataset."
 			)
 		
-		// Start extracting and decoding the data from the specified path.
-		val datasetTask = async(Dispatchers.IO) { TransparentStorageFormat.extract(path) }
+		// Extracting and decode the data from the specified path.
+		val storedDataset = withContext(Dispatchers.IO)
+		{
+			TransparentStorageFormat.extract(path)
+		}
 		
 		val dataSource = source.create()
 		
-		// Todo: Don't waste a request is the symbol is already in the dataset.
-		//  Likely, extraction will have to be completed without Async.
-		
-		// Get the symbol.
-		val symbolResult =
-			dataSource.getSymbol(
-				apiKey,
-				operation.exchangeName,
-				operation.baseAssetSymbol,
-				operation.quoteAssetSymbol
-			)
-		
-		if (!symbolResult.wasSuccessful)
-			throw DataAggregatorException(symbolResult.errorMessage!!)
-		
-		val (symbol, base, quote, exchange) = symbolResult
-		
-		// Wait for the extraction to finish.
-		val storedDataset = datasetTask.await()
+		val operationExchange = operation.exchangeName
+		val operationBase = operation.baseAssetSymbol
+		val operationQuote = operation.quoteAssetSymbol
 		
 		val dataset = storedDataset modifiedBy
 		{
+			val symbol: String
+			val base: String
+			val quote: String
+			val exchange: String
+			
+			// Resolve the symbol.
+			
+			val possibleSymbol =
+				dataSource.toPossibleSymbol(
+					operationBase,
+					operationQuote,
+					operationExchange
+				)
+			
+			if (hasSymbol(possibleSymbol))
+			{
+				symbol = possibleSymbol
+				base = operationBase.toUpperCase()
+				quote = operationQuote.toUpperCase()
+				exchange = operationExchange.toUpperCase()
+			}
+			else
+			{
+				// Get the symbol.
+				val symbolResult =
+					dataSource.getSymbol(
+						apiKey, possibleSymbol
+					)
+				
+				if (!symbolResult.wasSuccessful)
+					throw DataAggregatorException(symbolResult.errorMessage!!)
+				
+				symbol = symbolResult.symbol
+				base = symbolResult.actualBaseAsset
+				quote = symbolResult.actualQuoteAsset
+				exchange = symbolResult.actualExchange
+			}
+			
 			onSymbol(symbol, base, quote, exchange)
 			{
 				val intervalValue = parseInterval(interval)

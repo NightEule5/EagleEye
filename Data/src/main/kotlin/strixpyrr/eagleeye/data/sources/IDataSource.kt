@@ -25,6 +25,13 @@ interface IDataSource
 	
 	fun toSourceNotation(interval: Interval): String
 	
+	fun toPossibleSymbol(base: String, quote: String, exchange: String): String
+	
+	suspend fun getSymbol(
+		apiKey: String,
+		possibleSymbol: String
+	): ISymbolResult
+	
 	suspend fun getSymbol(
 		apiKey: String,
 		exchange: String,

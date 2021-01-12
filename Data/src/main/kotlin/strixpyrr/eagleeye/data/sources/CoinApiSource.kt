@@ -25,13 +25,14 @@ open class CoinApiSource(protected val client: CoinApiClient = CoinApiClient()) 
 	
 	override fun toSourceNotation(interval: Interval) = interval.coinApiNotation
 	
-	override suspend fun getSymbol(apiKey: String, exchange: String, base: String, quote: String): IDataSource.ISymbolResult
+	override fun toPossibleSymbol(base: String, quote: String, exchange: String) =
+		(exchange + "_SPOT_" + base + "_" + quote).toUpperCase()
+	
+	override suspend fun getSymbol(apiKey: String, exchange: String, base: String, quote: String) =
+		getSymbol(apiKey, toPossibleSymbol(base, quote, exchange))
+	
+	override suspend fun getSymbol(apiKey: String, possibleSymbol: String): IDataSource.ISymbolResult
 	{
-		val preparedExchange = exchange.toUpperCase()
-		val preparedBase = base.toUpperCase()
-		val preparedQuote = quote.toUpperCase()
-		val possibleSymbol = "${preparedExchange}_SPOT_${preparedBase}_$preparedQuote"
-		
 		val symbols = client.getSymbols(apiKey, symbolIdFilter = arrayOf(possibleSymbol))
 		
 		return if (symbols.status.isSuccess)
@@ -46,10 +47,10 @@ open class CoinApiSource(protected val client: CoinApiClient = CoinApiClient()) 
 					"Multiple symbol results were received: $results. " +
 						if (value.any { it.symbolId == possibleSymbol })
 							"The data with an exact symbol Id match ($possibleSymbol)" +
-							" will be used."
+								" will be used."
 						else
 							"The first one will be used, which may not be the desired" +
-							" behavior."
+								" behavior."
 				}
 			
 			// Todo: I don't see how the first filter would every fail, since the
