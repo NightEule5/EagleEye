@@ -16,10 +16,6 @@ package strixpyrr.eagleeye
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgParser.OptionPrefixStyle.GNU
 import kotlinx.cli.Subcommand
-import strixpyrr.eagleeye.data.DataAggregation
-import strixpyrr.eagleeye.data.aggregateData
-import strixpyrr.eagleeye.data.getApiKeyOption
-import strixpyrr.eagleeye.data.getSourceOption
 import kotlin.system.exitProcess
 
 fun main(parameters: Array<String>)
@@ -46,9 +42,9 @@ private object DataAggregationSubcommand :
 		actionDescription = "Downloads data from a remote source and aggregates it into a dataset."
 	)
 {
-	private val source = DataAggregation.getSourceOption(parser = this)
-	private val apiKey = DataAggregation.getApiKeyOption(parser = this)
+	//private val source = DataAggregation.getSourceOption(parser = this)
+	//private val apiKey = DataAggregation.getApiKeyOption(parser = this)
 	
-	override fun execute() =
-		aggregateData(DataAggregation(source.value, apiKey.value))
+	override fun execute() = Unit
+		//aggregateData(DataAggregation(source.value, apiKey.value))
 }
