@@ -1,4 +1,4 @@
-// Copyright 2020 Strixpyrr
+// Copyright 2021 Strixpyrr
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,31 +11,23 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package strixpyrr.eagleeye
+package strixpyrr.eagleeye.common
 
 import kotlinx.cli.ArgParser
-import kotlinx.cli.ArgParser.OptionPrefixStyle.GNU
-import strixpyr.eagleeye.data.view.ViewCommand
-import strixpyrr.eagleeye.data.DataCommand
-import kotlin.system.exitProcess
+import kotlinx.cli.Subcommand
 
-fun main(parameters: Array<String>)
+interface IModuleCommand<C : IModuleCommand.IValueContainer>
 {
-	try
+	fun populate(parser: ArgParser): C
+	
+	suspend fun run(values: C)
+	
+	val subcommand: Subcommand
+	
+	interface IValueContainer
 	{
-		val parser = ArgParser("EagleEye", prefixStyle = GNU)
-		
-		parser.subcommands(
-			DataCommand.subcommand,
-			ViewCommand.subcommand
-		)
-		
-		parser.parse(parameters)
-	}
-	catch (e: Exception)
-	{
-		// Log the exception.
-		
-		exitProcess(-1)
+		// Todo: Potentially do some delegate removal, so we aren't retaining refs
+		//  to the options.
+		fun clear() { }
 	}
 }

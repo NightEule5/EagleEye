@@ -13,14 +13,12 @@
 // limitations under the License.
 package strixpyrr.eagleeye.data
 
-import kotlinx.cli.ArgParser
+import kotlinx.cli.*
 import kotlinx.cli.ArgParser.OptionPrefixStyle.GNU
-import kotlinx.cli.ArgType
-import kotlinx.cli.default
-import kotlinx.cli.required
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import strixpyrr.abstrakt.annotations.InlineOnly
+import strixpyrr.eagleeye.common.IModuleCommand
 import strixpyrr.eagleeye.data.DataAggregation.OperationInfo
 import strixpyrr.eagleeye.data.DataAggregation.OperationInfo.Mode
 import strixpyrr.eagleeye.data.internal.roundedTo
@@ -33,40 +31,29 @@ import kotlin.system.exitProcess
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
+suspend fun main(parameters: Array<String>)
+{
+	val parser = ArgParser(DataCommand.Name, prefixStyle = GNU)
+	
+	val container = DataCommand.Container(parser)
+	
+	parser.parse(parameters)
+	
+	container.run()
+}
+
 @OptIn(
 	ExperimentalTime::class,
 	ExperimentalPathApi::class
 )
-suspend fun main(parameters: Array<String>)
+private suspend fun DataCommand.Container.run()
 {
 	try
 	{
-		val parser = ArgParser("Data", prefixStyle = GNU)
+		Verbose = verbose
 		
-		// Todo: Add a symbol option that overrides the Quote, Base, and Exchange
-		//  options.
-		
-		val verbose = parser.verboseOption
-		
-		val source = parser.sourceOption
-		val apiKey = parser.apiKeyOption
-		val output = parser.outputPathOption
-		val interval = parser.intervalOption
-		val limit = parser.entryLimitOption
-		val mode = parser.modeOption
-		val start = parser.startTimeOption
-		val end = parser.endTimeOption
-		val exchange = parser.exchangeOption
-		val quote = parser.quoteOption
-		val base = parser.baseOption
-		
-		parser.parse(parameters)
-		
-		if (verbose.value)
-			Verbose = true
-		
-		if (!interval.value.isValidTimeInterval)
-			throw DataAggregatorException("${interval.value} is not a valid time interval.")
+		if (!interval.isValidTimeInterval)
+			throw DataAggregatorException("$interval is not a valid time interval.")
 		
 		val executionTime = measureTime()
 		{
@@ -74,28 +61,28 @@ suspend fun main(parameters: Array<String>)
 			{
 				withTimeout(60L * 1000L)
 				{
-					val outputPath = output.value ?: "./EagleEyeDataset.dat"
+					val outputPath = output ?: "./EagleEyeDataset.dat"
 					
 					aggregateData(
 						DataAggregation.create(
 							Path(outputPath),
-							source.value,
-							apiKey.value,
+							source,
+							apiKey,
 							OperationInfo(
-								interval.value,
-								limit.value,
-								mode.value,
-								start.value withNotNull
+								interval,
+								limit,
+								mode,
+								start withNotNull
 								{
 									LocalDateTime.parse(this, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
 								},
-								end.value withNotNull
+								end withNotNull
 								{
 									LocalDateTime.parse(this, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
 								},
-								exchange.value,
-								quote.value,
-								base.value
+								exchange,
+								quote,
+								base
 							)
 						)
 					)
@@ -121,24 +108,56 @@ suspend fun main(parameters: Array<String>)
 	}
 }
 
-@InlineOnly
-inline fun DataAggregation.Companion.getVerboseOption(parser: ArgParser) = parser.verboseOption
+object DataCommand : IModuleCommand<DataCommand.Container>
+{
+	const val Name = "AggregateData"
+	const val Desc =
+		"Downloads data from a remote source and aggregates it into a dataset."
+	
+	override fun populate(parser: ArgParser) = Container(parser)
+	
+	override suspend fun run(values: Container) = values.run()
+	
+	override val subcommand: Subcommand get() = DataSubcommand()
+	
+	private class DataSubcommand : Subcommand(Name, Desc)
+	{
+		private val container = Container(parser = this)
+		
+		// Todo: I don't like having to use RunBlocking here, but there doesn't
+		//  seem to be a good way to do this.
+		override fun execute() = runBlocking { container.run() }
+	}
+	
+	class Container(parser: ArgParser) : IModuleCommand.IValueContainer
+	{
+		// Todo: Add a symbol option that overrides the Quote, Base, and Exchange
+		//  options.
+		
+		val verbose  by parser.verboseOption
+		
+		val source   by parser.sourceOption
+		val apiKey   by parser.apiKeyOption
+		val output   by parser.outputPathOption
+		val interval by parser.intervalOption
+		val limit    by parser.entryLimitOption
+		val mode     by parser.modeOption
+		val start    by parser.startTimeOption
+		val end      by parser.endTimeOption
+		val exchange by parser.exchangeOption
+		val quote    by parser.quoteOption
+		val base     by parser.baseOption
+	}
+}
 
-@PublishedApi
-internal val ArgParser.verboseOption get() =
+private val ArgParser.verboseOption get() =
 	option(
 		ArgType.Boolean,
 		fullName = "verbose",
 		shortName = "v"
 	).default(false)
 
-// Exposes sourceOption without potentially conflicting with options with the same
-// name in other modules.
-@InlineOnly
-inline fun DataAggregation.Companion.getSourceOption(parser: ArgParser) = parser.sourceOption
-
-@PublishedApi
-internal val ArgParser.sourceOption get() =
+private val ArgParser.sourceOption get() =
 	option(
 		ArgType.Choice<Source>(),
 		fullName = "source",
@@ -146,11 +165,7 @@ internal val ArgParser.sourceOption get() =
 		description = "The source to download data from."
 	).default(Source.CoinAPI)
 
-@InlineOnly
-inline fun DataAggregation.Companion.getOutputPathOption(parser: ArgParser) = parser.outputPathOption
-
-@PublishedApi
-internal val ArgParser.outputPathOption get() =
+private val ArgParser.outputPathOption get() =
 	option(
 		ArgType.String,
 		fullName = "output-path",
@@ -158,11 +173,7 @@ internal val ArgParser.outputPathOption get() =
 		description = "A path to the file or directory to write data to."
 	)
 
-@InlineOnly
-inline fun DataAggregation.Companion.getApiKeyOption(parser: ArgParser) = parser.apiKeyOption
-
-@PublishedApi
-internal val ArgParser.apiKeyOption get() =
+private val ArgParser.apiKeyOption get() =
 	option(
 		ArgType.String,
 		fullName = "api-key",
@@ -174,11 +185,7 @@ private const val ApiKeyDescription =
 	"The API key to use when connecting to the source. If no value is provided," +
 	" it will be pulled from an environment variable."
 
-@InlineOnly
-inline fun DataAggregation.Companion.getIntervalOption(parser: ArgParser) = parser.intervalOption
-
-@PublishedApi
-internal val ArgParser.intervalOption get() =
+private val ArgParser.intervalOption get() =
 	option(
 		ArgType.String,
 		fullName = "time-interval",
@@ -208,11 +215,7 @@ private val String.isValidTimeInterval get() =
 		)
 	)
 
-@InlineOnly
-inline fun DataAggregation.Companion.getEntryLimitOption(parser: ArgParser) = parser.entryLimitOption
-
-@PublishedApi
-internal val ArgParser.entryLimitOption get() =
+private val ArgParser.entryLimitOption get() =
 	option(
 		ArgType.Int,
 		fullName = "entry-limit",
@@ -220,66 +223,42 @@ internal val ArgParser.entryLimitOption get() =
 		description = "How many entries should be downloaded."
 	).default(-1)
 
-@InlineOnly
-inline fun DataAggregation.Companion.getModeOption(parser: ArgParser) = parser.modeOption
-
-@PublishedApi
-internal val ArgParser.modeOption get() =
+private val ArgParser.modeOption get() =
 	option(
 		ArgType.Choice<Mode>(),
 		fullName = "mode",
 		shortName = "m"
 	).default(Mode.Append)
 
-@InlineOnly
-inline fun DataAggregation.Companion.getStartTimeOption(parser: ArgParser) = parser.startTimeOption
-
-@PublishedApi
-internal val ArgParser.startTimeOption get() =
+private val ArgParser.startTimeOption get() =
 	option(
 		ArgType.String,
 		fullName = "start-time",
 		shortName = "s"
 	)
 
-@InlineOnly
-inline fun DataAggregation.Companion.getEndTimeOption(parser: ArgParser) = parser.endTimeOption
-
-@PublishedApi
-internal val ArgParser.endTimeOption get() =
+private val ArgParser.endTimeOption get() =
 	option(
 		ArgType.String,
 		fullName = "end-time",
 		shortName = "e"
 	)
 
-@InlineOnly
-inline fun DataAggregation.Companion.getExchangeOption(parser: ArgParser) = parser.exchangeOption
-
-@PublishedApi
-internal val ArgParser.exchangeOption get() =
+private val ArgParser.exchangeOption get() =
 	option(
 		ArgType.String,
 		fullName = "exchange-name",
 		shortName = "E"
 	).required()
 
-@InlineOnly
-inline fun DataAggregation.Companion.getQuoteOption(parser: ArgParser) = parser.quoteOption
-
-@PublishedApi
-internal val ArgParser.quoteOption get() =
+private val ArgParser.quoteOption get() =
 	option(
 		ArgType.String,
 		fullName = "quote-asset",
 		shortName = "Q"
 	).required()
 
-@InlineOnly
-inline fun DataAggregation.Companion.getBaseOption(parser: ArgParser) = parser.baseOption
-
-@PublishedApi
-internal val ArgParser.baseOption get() =
+private val ArgParser.baseOption get() =
 	option(
 		ArgType.String,
 		fullName = "base-asset",

@@ -27,6 +27,8 @@ allprojects()
 		
 		implementation("strixpyrr.abstrakt:Abstrakt:0.1.2")
 		implementation("uy.kohesive.klutter:klutter-core:3.0.0")
+		
+		implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
 	}
 	
 	val compileKotlin: KotlinCompile by tasks
@@ -51,4 +53,6 @@ allprojects()
 
 dependencies {
 	implementation(project(":Common"))
+	implementation(project(":Data"))
+	implementation(project(":Data:View"))
 }

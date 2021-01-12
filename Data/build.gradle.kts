@@ -29,8 +29,6 @@ dependencies {
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.11.4")
 	implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.11.4")
 	
-	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
-	
 	implementation("strixpyrr.abstrakt:Abstrakt:0.1.3")
 	implementation("strixpyrr.abstrakt:Abstrakt.Collections:0.0.6")
 }
