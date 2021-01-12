@@ -43,6 +43,9 @@ suspend fun main(parameters: Array<String>)
 	{
 		val parser = ArgParser("Data", prefixStyle = GNU)
 		
+		// Todo: Add a symbol option that overrides the Quote, Base, and Exchange
+		//  options.
+		
 		val verbose = parser.verboseOption
 		
 		val source = parser.sourceOption

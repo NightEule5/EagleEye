@@ -43,11 +43,20 @@ open class CoinApiSource(protected val client: CoinApiClient = CoinApiClient()) 
 				{
 					val results = value.joinToString { it.symbolId }
 					
-					"Multiple symbol results were received: $results. The first" +
-					" one will be used, which may not be the desired behavior."
+					"Multiple symbol results were received: $results. " +
+						if (value.any { it.symbolId == possibleSymbol })
+							"The data with an exact symbol Id match ($possibleSymbol)" +
+							" will be used."
+						else
+							"The first one will be used, which may not be the desired" +
+							" behavior."
 				}
 			
-			val symbol = value.firstOrNull() ?:
+			// Todo: I don't see how the first filter would every fail, since the
+			//  symbol to look for was provided in the request.
+			val symbol =
+				value.firstOrNull { it.symbolId == possibleSymbol } ?:
+				value.firstOrNull() ?:
 				return SymbolResult.createError("No symbol results were received.")
 			
 			SymbolResult.createSuccess(

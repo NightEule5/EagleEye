@@ -65,6 +65,9 @@ suspend fun aggregateData(aggregation: DataAggregation)
 		
 		val dataSource = source.create()
 		
+		// Todo: Don't waste a request is the symbol is already in the dataset.
+		//  Likely, extraction will have to be completed without Async.
+		
 		// Get the symbol.
 		val symbolResult =
 			dataSource.getSymbol(
