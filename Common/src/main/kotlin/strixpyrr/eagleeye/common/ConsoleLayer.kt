@@ -111,7 +111,7 @@ class ConsoleContentScope(
 	
 	enum class IndentationType { Tabs, TwoSpaces, FourSpaces }
 	
-	inline fun styledWith(style: TextStyle, format: () -> Unit)
+	inline fun styledWith(style: TextStyle?, format: () -> Unit)
 	{
 		contract {
 			callsInPlace(format, InvocationKind.EXACTLY_ONCE)
@@ -119,14 +119,15 @@ class ConsoleContentScope(
 		
 		val lastStyle = currentStyle
 		
-		currentStyle += style
+		if (style != null)
+			currentStyle += style
 		
 		format()
 		
 		currentStyle = lastStyle
 	}
 	
-	inline fun TextStyle.invoke(format: () -> Unit)
+	inline fun TextStyle?.invoke(format: () -> Unit)
 	{
 		contract {
 			callsInPlace(format, InvocationKind.EXACTLY_ONCE)
@@ -136,6 +137,89 @@ class ConsoleContentScope(
 	}
 	
 	fun resetStyle() { currentStyle = baseStyle }
+	
+	// Shorthand for a bunch of functions.
+	@Suppress("NOTHING_TO_INLINE")
+	inline operator fun String.invoke(isLineTerminator: Boolean = false, repeated: Int = -1, style: TextStyle? = null)
+	{
+		styledWith(style)
+		{
+			if (repeated < 0)
+				printFragment(this)
+			else
+			{
+				startLine()
+				
+				repeatFragmentInternal(currentStyle, this, repeated)
+			}
+			
+			if (isLineTerminator)
+				endLine()
+		}
+	}
+	
+	fun repeatFragment(style: TextStyle, value: String, count: Int)
+	{
+		require(count >= 0)
+		
+		startLine()
+		
+		repeatFragmentInternal(currentStyle + style, value, count)
+	}
+	
+	fun repeatFragment(value: String, count: Int)
+	{
+		require(count >= 0)
+		
+		startLine()
+		
+		repeatFragmentInternal(currentStyle, value, count)
+	}
+	
+	@PublishedApi
+	internal fun repeatFragmentInternal(style: TextStyle, value: String, count: Int)
+	{
+		val styled = style(value)
+		
+		for (i in 0 until count)
+			print(styled)
+	}
+	
+	fun printFragment(style: TextStyle, value: String)
+	{
+		startLine()
+		
+		print((currentStyle + style)(value))
+	}
+	
+	fun printFragment(value: String)
+	{
+		startLine()
+		
+		print(currentStyle(value))
+	}
+	
+	@Suppress("NOTHING_TO_INLINE")
+	inline fun finishLine(value: String) = printLine(value)
+	
+	fun printLine(style: TextStyle, value: String)
+	{
+		printFragment(style, value)
+		endLine()
+	}
+	
+	fun printLine(value: String)
+	{
+		printFragment(value)
+		endLine()
+	}
+	
+	fun printEmptyLine()
+	{
+		check(!lineStarted)
+		
+		endLine()
+	}
 	
 	private var lineStarted = false
 	
@@ -155,42 +239,6 @@ class ConsoleContentScope(
 	}
 	
 	fun endLine() = println().also { lineStarted = false }
-	
-	fun printFragment(style: TextStyle, value: String)
-	{
-		startLine()
-		
-		print((currentStyle + style)(value))
-	}
-	
-	fun printFragment(value: String)
-	{
-		startLine()
-		
-		print(currentStyle(value))
-	}
-	
-	operator fun String.invoke() = printFragment(this)
-	
-	fun printLine(style: TextStyle, value: String)
-	{
-		startLine()
-		printFragment(style, value)
-		  endLine()
-	}
-	
-	fun printLine(value: String)
-	{
-		startLine()
-		printFragment(value)
-		  endLine()
-	}
-	
-	fun finishLine(value: String)
-	{
-		printFragment(value)
-		endLine()
-	}
 	
 	companion object
 	{
