@@ -162,17 +162,15 @@ open class CoinApiClient protected constructor(retrofit: Retrofit)
 			val value = body()
 			val code = code()
 			
-			var errorMessage: String? = null
-			
-			errorBody() whenNotNull
-			{ error ->
-				val e = error.charStream()
-				
-				val message = e.readText()
-				
-				errorMessage = jackson.readValue<Error>(e).error
-				// errorMessage = jackson.readValue<Error>(error.charStream()).error
-			}
+			val errorMessage =
+				errorBody() whenNotNull
+				{ error ->
+					val e = error.charStream()
+					
+					jackson.readValue<Map<String, String>>(e)
+						   .getOrDefault("error", "")
+					//errorMessage = jackson.readValue<Error>(e).error
+				}
 			
 			val rateLimit: Int
 			val remaining: Int
