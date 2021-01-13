@@ -13,9 +13,11 @@
 // limitations under the License.
 package strixpyrr.eagleeye.data.sources
 
+import strixpyrr.eagleeye.data.errorVerbose
 import strixpyrr.eagleeye.data.models.Interval
 import strixpyrr.eagleeye.data.sources.apis.CoinApiClient
 import strixpyrr.eagleeye.data.sources.apis.CoinApiClient.Status.*
+import strixpyrr.eagleeye.data.statusVerbose
 import strixpyrr.eagleeye.data.warnVerbose
 import java.time.Instant
 
@@ -37,6 +39,8 @@ open class CoinApiSource(protected val client: CoinApiClient = CoinApiClient()) 
 		
 		return if (symbols.status.isSuccess)
 		{
+			symbols.writeRequestLimitText()
+			
 			val value = symbols.value!!
 			
 			if (value.size > 1)
@@ -67,7 +71,12 @@ open class CoinApiSource(protected val client: CoinApiClient = CoinApiClient()) 
 				symbol.exchangeId
 			)
 		}
-		else SymbolResult.createError(symbols.error)
+		else
+		{
+			symbols.writeRequestLimitErrorText()
+			
+			SymbolResult.createError(symbols.error)
+		}
 	}
 	
 	override suspend fun getHistoricalData(apiKey: String, symbol: String, interval: String, timeStart: Instant, timeEnd: Instant?, limit: Int?): IDataSource.IHistoricalDataResult
@@ -76,6 +85,8 @@ open class CoinApiSource(protected val client: CoinApiClient = CoinApiClient()) 
 		
 		return if (data.status.isSuccess)
 		{
+			data.writeRequestLimitText()
+			
 			val value =
 				data.value!!
 					.map()
@@ -93,7 +104,12 @@ open class CoinApiSource(protected val client: CoinApiClient = CoinApiClient()) 
 			
 			HistoricalDataResult.createSuccess(value)
 		}
-		else HistoricalDataResult.createError(data.error)
+		else
+		{
+			data.writeRequestLimitErrorText()
+			
+			HistoricalDataResult.createError(data.error)
+		}
 	}
 	
 	protected val CoinApiClient.Result<*>.error get() =
@@ -123,5 +139,30 @@ open class CoinApiSource(protected val client: CoinApiClient = CoinApiClient()) 
 					Interval.Denomination.Months  -> "MTH"
 					Interval.Denomination.Years   -> "YRS"
 				}
+		
+		private fun CoinApiClient.Result<*>.writeRequestLimitText()
+		{
+			val (_, _, _, rateLimit, remaining, _, reset) = this
+			
+			statusVerbose()
+			{
+				val used = rateLimit - remaining
+				
+				"The last request used $used requests from your CoinApi.io rate" +
+				" limit, which now has $remaining remaining and will reset on "  +
+				"$reset."
+			}
+		}
+		
+		private fun CoinApiClient.Result<*>.writeRequestLimitErrorText()
+		{
+			val (_, _, _, rateLimit, remaining, _, reset) = this
+			
+			if (status == TooManyRequests)
+				errorVerbose()
+				{
+					"Your CoinApi.io was exceeded, but it will reset on $reset."
+				}
+		}
 	}
 }
