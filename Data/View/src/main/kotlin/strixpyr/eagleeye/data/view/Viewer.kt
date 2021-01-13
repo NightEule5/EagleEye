@@ -17,6 +17,8 @@ import com.github.ajalt.mordant.terminal.TextColors.green
 import strixpyrr.eagleeye.common.ConsoleContentScope
 import strixpyrr.eagleeye.common.console
 import strixpyrr.eagleeye.data.models.Dataset
+import strixpyrr.eagleeye.data.models.Interval
+import strixpyrr.eagleeye.data.models.MarketInstant
 import strixpyrr.eagleeye.data.storage.TransparentStorageFormat
 import uy.klutter.core.common.withNotNull
 import java.nio.file.Path
@@ -43,6 +45,8 @@ suspend fun view(datasetPath: Path, humanReadable: Boolean)
 
 private fun ConsoleContentScope.displayAll(dataset: Dataset, enableIndex: Boolean = true, dataPointLimit: Int = 21)
 {
+	require(dataPointLimit > 0) { "The data point limit must be more than 0, but it was $dataPointLimit." }
+	
 	if (enableIndex)
 	{
 		"Index:"()
@@ -88,7 +92,7 @@ private fun ConsoleContentScope.displayAll(dataset: Dataset, enableIndex: Boolea
 						
 						val padding = ' '.repeat(alignedLength - id.length)
 						
-						"[$index] -> $id$padding ($type)"(isLineTerminator = true)
+						printLine("[$index] -> $id$padding ($type)")
 					}
 				}
 				
@@ -120,21 +124,104 @@ private fun ConsoleContentScope.displayAll(dataset: Dataset, enableIndex: Boolea
 						
 						// Todo: Add alignment whitespace.
 						
-						"$symbolName ->"(isLineTerminator = true)
+						printLine("$symbolName ->")
 						
 						indented()
 						{
-							"Quote   : [$quote] ($quoteName)"      (isLineTerminator = true)
-							"Base    : [$base] ($baseName)"        (isLineTerminator = true)
-							"Exchange: [$exchange] ($exchangeName)"(isLineTerminator = true)
-							"Type    : $type"                      (isLineTerminator = true)
+							printLine("Quote   : [$quote] ($quoteName)"      )
+							printLine("Base    : [$base] ($baseName)"        )
+							printLine("Exchange: [$exchange] ($exchangeName)")
+							printLine("Type    : $type"                      )
 						}
 					}
 				}
 			}
 		} ?: finishLine(" No data.")
+		
+		printEmptyLine()
+	}
+	
+	printLine("Symbol data:")
+	
+	indented()
+	{
+		val limit = dataPointLimit - 1
+		
+		for ((i, sym) in dataset.symbols)
+		{
+			printLine("[$i] ->")
+			
+			indented()
+			{
+				for (flow in sym.data_)
+				{
+					val interval = flow.interval.format()
+					
+					printLine("$interval:")
+					
+					indented()
+					{
+						val start = flow.start
+						val end   = flow.end
+						
+						printLine(
+							"Allowed Time Range: " +
+								if (start == null)
+									if (end == null)
+										"None."
+									else "(,$end]"
+								else "[$start,)"
+						)
+						
+						printEmptyLine()
+						
+						fun MarketInstant.print()
+						{
+							
+							val time = time?.toString() ?: "<Undefined>"
+							
+							printLine(
+								"[$time] Open: $openPrice | High: $highPrice | Low: $lowPrice | Close: $closePrice | Volume: $volume"
+							)
+						}
+						
+						var truncated = false
+						val points = flow.points.run()
+						{
+							if (size > dataPointLimit)
+							{
+								truncated = true
+								subList(0, dataPointLimit - 1) // [0,l)
+							}
+							else this
+						}
+						
+						points.forEach(MarketInstant::print)
+						
+						if (truncated)
+						{
+							indented { printLine("...") }
+							flow.points.last().print()
+						}
+					}
+				}
+			}
+		}
 	}
 }
+
+private fun Interval?.format() =
+	if (this == null)
+		"<Undefined>"
+	else length.toString() + when (denomination)
+	{
+		Interval.Denomination.Seconds -> " Second"
+		Interval.Denomination.Minutes -> " Minute"
+		Interval.Denomination.Hours   -> " Hour"
+		Interval.Denomination.Days    -> " Day"
+		Interval.Denomination.Months  -> " Month"
+		Interval.Denomination.Years   -> " Year"
+	}
 
 private enum class TermType { Unknown, Symbol, Asset, Exchange }
 

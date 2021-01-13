@@ -45,8 +45,13 @@ allprojects()
 			"-Xopt-in=kotlinx.cli.ExperimentalCli",
 			"-Xopt-in=kotlin.contracts.ExperimentalContracts",
 			"-Xopt-in=kotlin.RequiresOptIn",
-			"-Xjvm-default=all",
-			"-Xstring-concat=indy-with-constants"
+			"-Xjvm-default=all"
+			// Todo: Is this really faster? My admittedly limited testing revealed
+			//  that with this option *off* a concat-heavy module (View) ran about
+			//  50% faster. However, I thought the InvokeDynamic method was faster.
+			//  Doesn't really matter in a program that only prints text, but it's
+			//  quite weird.
+			// "-Xstring-concat=indy-with-constants"
 		)
 	}
 }
