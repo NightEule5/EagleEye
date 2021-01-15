@@ -15,6 +15,7 @@ package strixpyrr.eagleeye
 
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgParser.OptionPrefixStyle.GNU
+import strixpyr.eagleeye.data.view.ViewModule
 import strixpyrr.eagleeye.data.DataModule
 import kotlin.system.exitProcess
 
@@ -26,7 +27,8 @@ fun main(parameters: Array<String>)
 		val parser = ArgParser("EagleEye", prefixStyle = GNU)
 		
 		parser.subcommands(
-			DataModule.subcommand
+			DataModule.subcommand,
+			ViewModule.subcommand
 		)
 		
 		parser.parse(parameters)
