@@ -15,19 +15,11 @@ package strixpyrr.eagleeye.common
 
 import kotlinx.cli.ArgParser
 import kotlinx.cli.Subcommand
+import strixpyrr.eagleeye.common.cli.ModuleSubcommand
 
-interface IModuleCommand<C : IModuleCommand.IValueContainer>
+interface IModule : ICommandInfoProvider
 {
-	fun populate(parser: ArgParser): C
+	fun populate(parser: ArgParser)
 	
-	suspend fun run(values: C)
-	
-	val subcommand: Subcommand
-	
-	interface IValueContainer
-	{
-		// Todo: Potentially do some delegate removal, so we aren't retaining refs
-		//  to the options.
-		fun clear() { }
-	}
+	val subcommand: Subcommand get() = ModuleSubcommand(module = this)
 }

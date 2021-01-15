@@ -1,4 +1,4 @@
-// Copyright 2020 Strixpyrr
+// Copyright 2021 Strixpyrr
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,30 +11,23 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package strixpyrr.eagleeye
+package strixpyrr.eagleeye.common.cli
 
-import kotlinx.cli.ArgParser
-import kotlinx.cli.ArgParser.OptionPrefixStyle.GNU
-import strixpyrr.eagleeye.data.DataModule
-import kotlin.system.exitProcess
-
-@OptIn(ExperimentalStdlibApi::class)
-fun main(parameters: Array<String>)
-{
-	try
-	{
-		val parser = ArgParser("EagleEye", prefixStyle = GNU)
+/*suspend fun <C : Any> ArgParser.parseSuspending(
+	args: Array<String>,
+	subcommands: List<ContinuingSubcommand<C>>
+) = suspendCoroutine<C>()
+	{ continuation ->
+		subcommands(*subcommands.toTypedArray())
 		
-		parser.subcommands(
-			DataModule.subcommand
-		)
+		subcommands.forEach { it.continuation = continuation }
 		
-		parser.parse(parameters)
-	}
-	catch (e: Exception)
-	{
-		// Log the exception.
-		
-		exitProcess(-1)
-	}
-}
+		try
+		{
+			parse(args)
+		}
+		catch (e: Throwable)
+		{
+			continuation.resumeWithException(e)
+		}
+	}*/

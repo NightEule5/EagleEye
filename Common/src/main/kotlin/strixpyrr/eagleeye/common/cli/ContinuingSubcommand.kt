@@ -11,22 +11,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package strixpyr.eagleeye.data.view
+package strixpyrr.eagleeye.common.cli
 
-import kotlinx.cli.ArgParser
-import kotlinx.cli.ArgParser.OptionPrefixStyle.GNU
-
-suspend fun main(parameters: Array<String>)
+/**
+ * A [Subcommand] implementation that, upon execution, resumes a coroutine.
+ */
+// This was just an experiment. It's certainly faster for whatever reason, but it
+// was quite finicky. See ArgParser.kt for the rest of the implementation; you'll
+// see what I mean.
+/*abstract class ContinuingSubcommand<C : Any>(
+	name: String, desc: String,
+) : Subcommand(name, desc)
 {
-	val parser = ArgParser(ViewModule.Name, prefixStyle = GNU)
+	lateinit var continuation: Continuation<C>
 	
-	ViewModule.run()
-	{
-		val container = ViewModule.Container(parser)
-		
-		parser.parse(parameters)
-		
-		container.run()
-	}
-}
-
+	protected abstract val container: C
+	
+	override fun execute() = continuation.resume(container)
+}*/

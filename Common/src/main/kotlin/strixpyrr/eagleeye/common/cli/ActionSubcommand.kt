@@ -11,22 +11,20 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package strixpyr.eagleeye.data.view
+package strixpyrr.eagleeye.common.cli
 
-import kotlinx.cli.ArgParser
-import kotlinx.cli.ArgParser.OptionPrefixStyle.GNU
+import kotlinx.cli.Subcommand
+import kotlinx.coroutines.runBlocking
+import strixpyrr.eagleeye.common.IAction
+import strixpyrr.eagleeye.common.IActionParameterContainer
 
-suspend fun main(parameters: Array<String>)
+class ActionSubcommand<C : IActionParameterContainer>(
+	private val parent: IAction<C>,
+	name: String = parent.name,
+	actionDescription: String = parent.description
+) : Subcommand(name, actionDescription)
 {
-	val parser = ArgParser(ViewModule.Name, prefixStyle = GNU)
+	private val container = parent.createParameterContainer(parser = this)
 	
-	ViewModule.run()
-	{
-		val container = ViewModule.Container(parser)
-		
-		parser.parse(parameters)
-		
-		container.run()
-	}
+	override fun execute() = runBlocking { parent(container) }
 }
-
