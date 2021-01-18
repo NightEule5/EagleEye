@@ -45,7 +45,8 @@ allprojects()
 			"-Xopt-in=kotlinx.cli.ExperimentalCli",
 			"-Xopt-in=kotlin.contracts.ExperimentalContracts",
 			"-Xopt-in=kotlin.RequiresOptIn",
-			"-Xjvm-default=all"
+			"-Xjvm-default=all",
+			"-Xinline-classes"
 			// Todo: Is this really faster? My admittedly limited testing revealed
 			//  that with this option *off* a concat-heavy module (View) ran about
 			//  50% faster. However, I thought the InvokeDynamic method was faster.

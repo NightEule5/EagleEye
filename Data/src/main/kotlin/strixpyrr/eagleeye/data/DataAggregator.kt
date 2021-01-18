@@ -55,12 +55,13 @@ suspend fun aggregateData(aggregation: DataAggregation)
 	
 	coroutineScope()
 	{
+		// Todo: Duplicate of the condition above. Not sure why this wasn't removed.
 		if (!TransparentStorageFormat.canStoreTo(path))
 			throw DataAggregatorException(
 				"The path provided is not a valid location to store the resulting dataset."
 			)
 		
-		// Extracting and decode the data from the specified path.
+		// Extract and decode the data from the specified path.
 		val storedDataset = withContext(Dispatchers.IO)
 		{
 			TransparentStorageFormat.extract(path)
@@ -364,38 +365,6 @@ private fun Source.createSource(customSourceType: KClass<out IDataSource>?) =
 			)
 		}
 	else create()
-
-fun parseInterval(value: String): Interval
-{
-	var digitCount = 0
-	
-	for (c in value) if (c.isDigit()) digitCount++ else break
-	
-	check(digitCount > 0)
-	
-	val denomination =
-		value.substring(digitCount)
-			.run()
-			{
-				when
-				{
-					equals("SEC", ignoreCase = true) -> Interval.Denomination.Seconds
-					equals("MIN", ignoreCase = true) -> Interval.Denomination.Minutes
-					equals("HRS", ignoreCase = true) -> Interval.Denomination.Hours
-					equals("DAY", ignoreCase = true) -> Interval.Denomination.Days
-					equals("MTH", ignoreCase = true) -> Interval.Denomination.Months
-					equals("YRS", ignoreCase = true) -> Interval.Denomination.Years
-					else                             ->
-						throw IllegalArgumentException(
-							"The interval has an unknown denomination."
-						)
-				}
-			}
-	
-	val length = value.substring(0 until digitCount).toInt() // [0,n)
-	
-	return Interval(denomination, length)
-}
 
 data class DataAggregation(
 	val path: Path,

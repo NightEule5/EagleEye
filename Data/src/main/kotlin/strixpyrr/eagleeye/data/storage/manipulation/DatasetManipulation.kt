@@ -145,7 +145,7 @@ internal class DatasetScope(private val existing: Dataset?)
 	) = symbols.put(symbolIndex, group)
 	
 	class SymbolScope(
-		private val symbol: String, // For error messages.
+		@JvmField internal val symbol: String, // For error messages.
 		private val intervalGroup: SymbolIntervalGroup?
 	)
 	{
@@ -170,6 +170,11 @@ internal class DatasetScope(private val existing: Dataset?)
 			setFlow(flow, scope.toFlow())
 		}
 		
+		inline fun forEachInterval(action: IntervalScope.(MutableIterator<IntervalScope>) -> Unit) =
+			intervalIterator().run { forEach { it.action(this) } }
+		
+		fun intervalIterator(): MutableIterator<IntervalScope> = IntervalIterator(data)
+		
 		@PublishedApi
 		internal fun getFlow(interval: Interval) = data.find { it.interval == interval }
 		
@@ -187,11 +192,28 @@ internal class DatasetScope(private val existing: Dataset?)
 				data,
 				unknownFields = intervalGroup.carryUnknown()
 			)
+		
+		private inner class IntervalIterator(
+			data: MutableList<MarketFlow>
+		) : AbstractIterator<IntervalScope>(), MutableIterator<IntervalScope>
+		{
+			private val data = data.iterator()
+			
+			override fun computeNext()
+			{
+				if (!data.hasNext()) { done(); return }
+				
+				val flow = data.next()
+				setNext(IntervalScope(symbol, flow.interval!!, flow))
+			}
+			
+			override fun remove() = data.remove()
+		}
 	}
 	
 	class IntervalScope(
 		symbol: String,
-		private val interval: Interval,
+		@JvmField internal val interval: Interval,
 		private val flow: MarketFlow?
 	)
 	{
@@ -341,6 +363,69 @@ internal class DatasetScope(private val existing: Dataset?)
 			return MarketFlow(
 				start, end, interval, points.values.toList(), unknownFields = flow.carryUnknown()
 			)
+		}
+	}
+	
+	inline fun forEachSymbol(
+		action: SymbolScope.(MutableIterator<SymbolScope>) -> Unit
+	) = symbolIterator().run { forEach { it.action(this) } }
+	
+	fun symbolIterator(): MutableIterator<SymbolScope> = SymbolIterator(symbolMetadataMap, termMap, symbols)
+	
+	private class SymbolIterator(
+		private val metadata: MutableMap<Int, SymbolMetadata>,
+		private val terms: MutableMap<String, Int>,
+		private val symbols: MutableMap<Int, SymbolIntervalGroup>
+	) : AbstractIterator<SymbolScope>(), MutableIterator<SymbolScope>
+	{
+		private val indices = symbols.keys.iterator()
+		private var cur = -1
+		
+		override fun computeNext()
+		{
+			if (!indices.hasNext()) { done(); return }
+			
+			cur = indices.next()
+			setNext(
+				SymbolScope(getId(cur), symbols[cur])
+			)
+		}
+		
+		private fun getId(i: Int): String
+		{
+			for ((key, value) in terms)
+				if (value == i)
+					return key
+			
+			throw NoSuchElementException()
+		}
+		
+		override fun remove()
+		{
+			val terms = terms.values
+			val symbol = metadata[cur]!!
+			
+			// Remove the symbol.
+			indices.remove()
+			metadata -= cur
+			terms    -= cur
+			
+			// Safely remove the asset and exchange indices from metadata.
+			val held   = symbol.heldAsset
+			val traded = symbol.tradedAsset
+			
+			val exchange = symbol.exchange
+			
+			val symbols = metadata.values
+			
+			if (symbols.none { it.heldAsset == held })
+				terms -= held
+			
+			if (symbols.none { it.tradedAsset == traded })
+				terms -= traded
+			
+			if (symbols.none { it.exchange == exchange })
+				terms -= exchange
 		}
 	}
 	
