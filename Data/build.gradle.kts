@@ -31,6 +31,8 @@ dependencies {
 	
 	implementation("strixpyrr.abstrakt:Abstrakt:0.1.3")
 	implementation("strixpyrr.abstrakt:Abstrakt.Collections:0.0.6")
+	
+	implementation("com.github.doyaaaaaken:kotlin-csv-jvm:0.15.0")
 }
 
 kotlin {
