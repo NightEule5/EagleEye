@@ -15,6 +15,9 @@ package strixpyrr.eagleeye.data.storage
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okio.buffer
+import okio.sink
+import okio.source
 import strixpyrr.eagleeye.data.models.Dataset
 import strixpyrr.eagleeye.data.statusVerbose
 import strixpyrr.eagleeye.data.warnVerbose
@@ -23,6 +26,7 @@ import java.io.IOException
 import java.nio.file.Path
 import kotlin.io.path.*
 
+@Suppress("BlockingMethodInNonBlockingContext") // KTIJ-838
 @OptIn(ExperimentalPathApi::class)
 object TransparentStorageFormat : IDataStorageFormat
 {
@@ -55,8 +59,8 @@ object TransparentStorageFormat : IDataStorageFormat
 		{
 			try
 			{
-				file.toFile()
-					.outputStream()
+				file.sink()
+					.buffer()
 					.use(data::encode)
 				
 				statusVerbose()
@@ -88,8 +92,8 @@ object TransparentStorageFormat : IDataStorageFormat
 			{
 				try
 				{
-					file.toFile()
-						.inputStream()
+					file.source()
+						.buffer()
 						.use(Dataset.ADAPTER::decode)
 				}
 				catch (e: IOException)
