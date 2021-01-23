@@ -26,4 +26,12 @@ internal inline infix fun <E : Enum<E>> EnumSet<E>.set(value: E) { add(value) }
 internal inline infix fun <E : Enum<E>> EnumSet<E>.unset(value: E) { remove(value) }
 
 @InlineOnly
+internal inline infix fun <E : Enum<E>> EnumSet<E>.isSet(value: E) = value in this
+
+@InlineOnly
+internal inline infix fun <E : Enum<E>> EnumSet<E>.isNotSet(value: E) = value !in this
+
+
+
+@InlineOnly
 internal inline infix fun <E : Enum<E>> EnumSet<E>.has(value: E) = value in this

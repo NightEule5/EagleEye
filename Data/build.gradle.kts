@@ -33,6 +33,8 @@ dependencies {
 	implementation("strixpyrr.abstrakt:Abstrakt.Collections:0.0.6")
 	
 	implementation("com.github.doyaaaaaken:kotlin-csv-jvm:0.15.0")
+	
+	implementation(group = "com.squareup.okio", name = "okio", version = "2.10.+")
 }
 
 kotlin {
