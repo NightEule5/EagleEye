@@ -18,11 +18,35 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import okio.BufferedSource
+import okio.buffer
+import okio.source
 import strixpyrr.abstrakt.annotations.InlineOnly
 import uy.klutter.core.collections.toImmutable
 import java.io.Closeable
+import java.nio.file.Path
 
 // A pared-down CSV parser built on top of Okio.
+
+internal fun Path.openCsv(delimiter: Char) =
+	source().buffer().openCsv(delimiter, keepOpen = false, autoClose = true)
+
+internal fun BufferedSource.openCsv(
+	delimiter: Char,
+	keepOpen: Boolean,
+	autoClose: Boolean = true
+) = RowReader(
+		FieldReader(source = this, delimiter, keepOpen, autoClose)
+	)
+
+internal fun openStdInAsCsv(delimiter: Char) =
+	RowReader(
+		FieldReader(
+			System.`in`.source().buffer(),
+			delimiter,
+			keepOpen = true,
+			autoClose = false
+		)
+	)
 
 internal class FieldReader(
 	private val source: BufferedSource,
@@ -220,7 +244,51 @@ internal class Table(
 				{
 					indices += i
 					columns -= column
+					
+					break
 				}
+		}
+		
+		if (columns.isNotEmpty())
+		{
+			val unmatched = columns.joinToString { it.pattern }
+			
+			throw Exception(
+				"Some columns weren't matched in the header: $unmatched."
+			)
+		}
+		
+		return indices
+	}
+	
+	fun indexColumns(names: Set<String>, ignoreCase: Boolean = true): Set<Int>
+	{
+		val columns =
+			if (names is MutableSet)
+				names
+			else names.toMutableSet()
+		val indices = HashSet<Int>(header.size, 1.0f)
+		
+		header.forEachIndexed()
+		{ i, v ->
+			// (Don't match a column more than once.)
+			for (column in columns)
+				if (column.equals(v, ignoreCase))
+				{
+					indices += i
+					columns -= column
+					
+					break
+				}
+		}
+		
+		if (columns.isNotEmpty())
+		{
+			val unmatched = columns.joinToString()
+			
+			throw Exception(
+				"Some columns weren't matched in the header: $unmatched."
+			)
 		}
 		
 		return indices
