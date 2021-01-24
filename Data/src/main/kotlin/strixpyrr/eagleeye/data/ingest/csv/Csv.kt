@@ -185,6 +185,9 @@ internal open class RowReader(
 		open fun startNextRow() =
 			hasMoreRows.also { nextRow = it }
 		
+		open fun readStrict() =
+			read() ?: throw NoSuchElementException()
+		
 		open fun read() =
 			if (hasMore || nextRow)
 			{
