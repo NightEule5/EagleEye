@@ -14,7 +14,6 @@
 package strixpyrr.eagleeye.data.ingest.csv
 
 import kotlinx.coroutines.flow.flow
-import org.intellij.lang.annotations.Language
 
 internal inline fun <T> ColumnSkippingRowReader.read(
 	block: ColumnSkippingRowReader.SkippingRowScope.() -> T
@@ -154,7 +153,7 @@ internal class ColumnSkippingRowReader(
 	fun readNormally(list: MutableList<in String>) = scope.readToEndNormally(list)
 	fun readToSequenceNormally()                   = scope.readToEndIntoSequenceNormally()
 	
-	fun constrain(@Language("Regexp") inclusionRegex: Regex)
+	fun constrain(inclusionRegex: Regex)
 	{
 		readHeaderInternal()
 		
