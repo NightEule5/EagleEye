@@ -14,14 +14,13 @@
 package strixpyrr.eagleeye.data.ingest.csv
 
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import okio.BufferedSource
 import okio.buffer
 import okio.source
 import strixpyrr.abstrakt.annotations.InlineOnly
-import uy.klutter.core.collections.toImmutable
+import uy.klutter.core.collections.asReadOnly
 import java.io.Closeable
 import java.nio.file.Path
 
@@ -55,6 +54,7 @@ internal class FieldReader(
 	private val autoClose: Boolean
 ) : Closeable
 {
+	val isEos get() = source.exhausted()
 	var isEor = false
 		private set
 	
@@ -141,10 +141,120 @@ private inline fun BufferedSource.indexOf(c: Char) = indexOf(c.toByte())
 @InlineOnly
 private inline fun BufferedSource.skipRest() = skip(Long.MAX_VALUE)
 
-internal class RowReader(@JvmField internal val fieldReader: FieldReader) : Closeable by fieldReader
+internal inline fun <T> RowReader.read(block: RowReader.RowScope.() -> T) = RowScope().block()
+
+// Ok so the Scope variable inheritance got a little wack, but that's fine.
+// Shouldn't break™
+internal open class RowReader(
+	@JvmField internal val fieldReader: FieldReader
+) : Closeable by fieldReader
 {
-	fun toTable() = Table(parent = this, header = readToList())
+	private lateinit var _scope: RowScope
+	open val scope
+		get() =
+			if (::_scope.isInitialized)
+				_scope
+			else createScope()
 	
+	open fun read()                             = scope.readToEnd()
+	open fun readToList()                       = scope.readToEndIntoList()
+	open fun read(list: MutableList<in String>) = scope.readToEnd(list)
+	open fun readToSequence()                   = scope.readToEndIntoSequence()
+	
+	open fun skip() = scope.skipToEnd()
+	
+	protected open fun createScope() = RowScope()
+	
+	open inner class RowScope
+	{
+		inline operator fun <T> invoke(block: RowScope.() -> T) = block()
+		
+		val hasMore     get() = !fieldReader.isEor
+		val hasMoreRows get() = !fieldReader.isEos
+		
+		@JvmField protected var columnCount = -1
+		
+		// This is true by default, so if a scope is created when the reader is at
+		// the end of a row, the next row is started. When the end of the next row
+		// is reached, this will be set to false, leading to the intended behavior
+		// of needing to call StartNextRow before reading again.
+		// If the stream is exhausted, this property will be false, and a next row
+		// will not be allowed to start.
+		@JvmField protected var nextRow = hasMoreRows
+		
+		open fun startNextRow() =
+			hasMoreRows.also { nextRow = it }
+		
+		open fun read() =
+			if (hasMore || nextRow)
+			{
+				nextRow = false
+				
+				fieldReader.read()
+			}
+			else null
+		
+		open fun readToEnd() =
+			flow { while (true) emit(read() ?: break) }
+		
+		open fun readToEndIntoList() =
+			if (columnCount == -1)
+			{
+				val list = mutableListOf<String>()
+				
+				readToEnd(list)
+				
+				columnCount = list.size
+				
+				list
+			}
+			else ArrayList<String>(columnCount).apply(::readToEnd)
+		
+		open fun readToEnd(list: MutableList<in String>)
+		{
+			while (true) list += read() ?: break
+		}
+		
+		open fun readToEndIntoSequence() =
+			sequence { while (true) yield(read() ?: break) }
+		
+		open fun skip() =
+			if (hasMore || nextRow)
+			{
+				nextRow = false
+				
+				fieldReader.skip()
+				
+				true
+			}
+			else false
+		
+		open fun skipToEnd()
+		{
+			// lol
+			while (skip()) Unit
+		}
+	}
+	
+	protected val header: MutableList<String> = mutableListOf()
+	
+	val hasHeader get() = header.isNotEmpty()
+	
+	fun readHeader(): List<String>
+	{
+		readHeaderInternal()
+		
+		return header.asReadOnly()
+	}
+	
+	protected fun readHeaderInternal()
+	{
+		if (!hasHeader) read(header)
+	}
+	
+	// fun toTable() = Table(parent = this, header = readToList())
+	
+	/*
 	inline fun readWithSkippedColumns(crossinline skip: (Int) -> Boolean) =
 		flow()
 		{
@@ -170,36 +280,40 @@ internal class RowReader(@JvmField internal val fieldReader: FieldReader) : Clos
 				list += fieldReader.read()
 			else fieldReader.skip()
 	}
+	*/
 	
-	fun read() =
-		flow()
-		{
-			while (!fieldReader.isEor)
-				emit(fieldReader.read())
-		}
+	//open fun read() =
+	//	flow()
+	//	{
+	//		while (!fieldReader.isEor)
+	//			emit(fieldReader.read())
+	//	}
 	
+	/*
 	@Suppress("NOTHING_TO_INLINE")
 	inline fun readToList(capacity: Int = -1) =
 		(if (capacity > -1)
 			ArrayList<String>(capacity)
 		else ArrayList()).apply { read(this) }
+	 */
 	
-	fun read(list: MutableList<in String>)
-	{
-		while (!fieldReader.isEor)
-			list += fieldReader.read()
-	}
+	//open fun read(list: MutableList<in String>)
+	//{
+	//	while (!fieldReader.isEor)
+	//		list += fieldReader.read()
+	//}
 	
-	fun readToSequence(): Sequence<String> = rowIterator.sequence
+	//open fun readToSequence(): Sequence<String> = rowIterator.sequence
 	
-	fun skip()
-	{
-		while (!fieldReader.isEor)
-			fieldReader.skip()
-	}
+	//open fun skip()
+	//{
+	//	while (!fieldReader.isEor)
+	//		fieldReader.skip()
+	//}
 	
-	internal val rowIterator get() = RowIterator(fieldReader)
+	// internal val rowIterator get() = RowIterator(fieldReader)
 	
+	/*
 	internal class RowSequence(
 		private val iterator: Iterator<String>
 	) : Sequence<String>
@@ -219,8 +333,10 @@ internal class RowReader(@JvmField internal val fieldReader: FieldReader) : Clos
 		
 		inline val sequence get() = RowSequence(iterator = this)
 	}
+	 */
 }
 
+/*
 internal class Table(
 	@JvmField internal val parent: RowReader,
 	header: List<String>
@@ -327,3 +443,37 @@ internal class Table(
 		}
 	}
 }
+ */
+
+/*
+internal class TableReader(
+	internal val rowReader: RowReader,
+	header: List<String> = emptyList()
+) : Closeable
+{
+	internal var header = header
+		private set
+	
+	fun readRow() = rowReader.read()
+	
+	fun readRowToList() = rowReader.readToList(header.size)
+	
+	fun readRow(list: MutableList<in String>) = rowReader.read(list)
+	
+	fun readRowToSequence() = rowReader.readToSequence()
+	
+	fun skipRow() = rowReader.skip()
+	
+	fun readHeader() = rowReader.readToList()
+	
+	inline fun transform(
+		create: (FieldReader) -> RowReader,
+		transformHeader: (List<String>) -> List<String> = { it }
+	) = TableReader(
+			create(rowReader.fieldReader),
+			transformHeader(header)
+		)
+	
+	override fun close() = rowReader.close()
+}
+ */
