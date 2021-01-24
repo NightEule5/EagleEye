@@ -18,6 +18,8 @@ import java.util.EnumSet
 import java.util.EnumSet.noneOf
 
 internal inline fun <reified E : Enum<E>> EnumSet(): EnumSet<E> = noneOf(E::class.java)
+internal inline fun <reified E : Enum<E>> EnumSet(value: E): EnumSet<E> =
+	noneOf(E::class.java).apply { add(value) }
 
 @InlineOnly
 internal inline infix fun <E : Enum<E>> EnumSet<E>.set(value: E) { add(value) }
